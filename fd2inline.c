@@ -406,7 +406,7 @@ fF_ctor(const char* fname)
 
    if (fname)
    {
-      result=malloc(sizeof(fdFile));
+      result=calloc(1,sizeof(fdFile));
       if (result)
       {
 	 result->file=fopen(fname, "r");
@@ -722,7 +722,7 @@ fD_ctor(void)
    fdDef *result;
    regs count;
 
-   result=malloc(sizeof(fdDef));
+   result=calloc(1,sizeof(fdDef));
 
    if (result)
    {
@@ -2069,13 +2069,13 @@ main(int argc, char** argv)
       return EXIT_FAILURE;
    }
 
-   if (!(arrdefs=malloc(FDS*sizeof(fdDef*))))
+   if (!(arrdefs=calloc(FDS,sizeof(fdDef*))))
    {
       fprintf(stderr, "No mem for FDs\n");
       rc = EXIT_FAILURE;
       goto quit;
    }
-   if (!(arrcmts=malloc(FDS*sizeof(char*))))
+   if (!(arrcmts=calloc(FDS,sizeof(char*))))
    {
       fprintf(stderr, "No mem for FD comments\n");
       rc = EXIT_FAILURE;
@@ -2126,7 +2126,7 @@ main(int argc, char** argv)
    /* Make a copy before we sort, since we need to process the
       definitions in bias order, not lexical order */
 
-   if (!(defs=malloc(fds*sizeof(fdDef*))))
+   if (!(defs=calloc(fds,sizeof(fdDef*))))
    {
       fprintf(stderr, "No mem for FDs\n");
       rc = EXIT_FAILURE;
