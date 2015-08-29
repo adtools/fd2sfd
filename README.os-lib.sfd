@@ -1,0 +1,34 @@
+Place your SFD files here.
+
+* The official AmigaOS SFDs goes into the "amigaos" directory.
+
+* MorphOS does not come with SFD files, so you have to generate them
+from the official FD files instead.
+
+* You can add your own SFDs in the "3rd" directory.
+
+* 3rd party SFDs that should only be available for the AmigaOS
+compiler goes into 3rd-amigaos.
+
+* 3rd party SFDs that should only be available for the Amithlon
+compiler goes into 3rd-amithlon.
+
+* 3rd party SFDs that should only be available for the MorphOS
+compiler goes into 3rd-morphos.
+
+
+The directories are processed differenly depending on the target.
+
+
+* For the AmigaOS compiler, the amigaos, 3rd-amigaos and 3rd
+directories are processed.
+
+* For the Amithlon compiler, the amigaos, 3rd-amithlon and 3rd
+directories are processed.
+
+* For the MorphOS compiler, the amigaos, morphos, 3rd-morphos and 3rd
+directories are processed.
+
+
+Don't forget to add the include files in ".../os-include/XXX" as
+well.

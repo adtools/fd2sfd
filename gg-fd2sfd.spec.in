@@ -1,0 +1,57 @@
+%define Name fd2sfd
+%define Version @VERSION@
+
+Name        	: gg-%{Name}
+Version     	: %{Version}
+Release     	: 1
+
+Summary     	: Convert FD files to SFD files
+Group       	: Development/Tools
+Copyright   	: GPL
+URL         	: http://www.lysator.liu.se/~lcs/files/gg-cross/
+
+Source0		: http://www.lysator.liu.se/~lcs/files/gg-cross/%{Name}-%{Version}.tar.gz
+BuildRoot   	: /tmp/%{Name}-%{Version}
+
+Requires	: gg-sfdc
+Obsoletes	: gg-fd2inline
+
+%description
+fd2sfd is a parser that converts FD files and clib files to SFD files.
+FD and clib files contain information about functions in shared
+libraries.  fd2sfd reads these two files and merges the information
+contained therein, producing an output file suitable for futher
+processing using 'sfd' or 'sfdc'.
+
+fd2sfd is based on fd2inline 1.38 by Wolfgang Baron, Rainer F. Trunz,
+Kamil Iskra, Ralph Schmidt, Emmanuel Lesueur and Martin Blom.
+
+
+%prep
+%setup -q -n %{Name}-%{Version}
+
+%build
+%configure
+make all
+
+
+%install
+rm -rf ${RPM_BUILD_ROOT}
+%makeinstall
+
+
+%clean
+rm -rf ${RPM_BUILD_ROOT}
+
+
+%files
+%defattr(-,root,root)
+%doc COPYING %{Name}.readme
+%{_bindir}/*
+%{_datadir}/fd2sfd
+%{_prefix}/os-include
+%{_prefix}/os-lib
+
+%changelog
+* Thu Jul 25 2003 Martin Blom <martin@blom.org>
+- Initial rpm.

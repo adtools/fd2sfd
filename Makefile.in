@@ -1,0 +1,130 @@
+
+VERSION		= @VERSION@
+DATE		= @DATE@
+
+srcdir		= @srcdir@
+
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+bindir		= @bindir@
+datadir		= @datadir@
+fd2sfddir	= ${datadir}/fd2sfd
+
+CC		= @CC@
+CPPFLAGS	= @CPPFLAGS@ -DVERSION=\"$(VERSION)\" -DDATE=\"$(DATE)\" \
+		  -W -Wall
+LDFLAGS		= @LDFLAGS@ -s
+
+INSTALL		= @INSTALL@
+INSTALL_PROGRAM	= @INSTALL_PROGRAM@ -s
+INSTALL_DATA	= @INSTALL_DATA@
+
+VPATH		= $(srcdir)
+
+EXECUTABLE	= fd2sfd
+
+all:		$(EXECUTABLE)
+
+clean:
+	$(RM) $(EXECUTABLE) $(EXECUTABLE)-$(VERSION).tar.gz $(EXECUTABLE).lha \
+	      $(EXECUTABLE).readme gg-fd2sfd.spec *~ core config.log
+
+distclean:	clean
+	$(RM) Makefile cross/bin/gg-fix-includes config.status
+
+maintainter-clean: distclean
+	$(RM) $(srcdir)/configure gg-fd2sfd.spec
+
+install:	all
+	$(INSTALL) -d $(bindir) $(fd2sfddir)
+
+	# Install tools
+	$(INSTALL_PROGRAM) $(EXECUTABLE) $(bindir)
+	$(INSTALL_PROGRAM) cross/bin/gg-fix-includes $(bindir)
+	for f in `cd $(srcdir)/cross/share/ && find * -type f`; do \
+	  $(INSTALL_DATA) -D $(srcdir)/cross/share/$${f} $(fd2sfddir)/$${f}; \
+	done
+
+	# Install example file structure for FDs
+	$(INSTALL) -d $(prefix)/os-lib/fd/3rd
+	$(INSTALL) -d $(prefix)/os-lib/fd/3rd-amigaos
+	$(INSTALL) -d $(prefix)/os-lib/fd/3rd-amithlon
+	$(INSTALL) -d $(prefix)/os-lib/fd/3rd-morphos
+	$(INSTALL) -d $(prefix)/os-lib/fd/amigaos
+	$(INSTALL) -d $(prefix)/os-lib/fd/morphos
+	$(INSTALL_DATA) $(srcdir)/README.os-lib.fd $(prefix)/os-lib/fd/README
+
+	# Install example file structure for SFDs
+	$(INSTALL) -d $(prefix)/os-lib/sfd/3rd
+	$(INSTALL) -d $(prefix)/os-lib/sfd/3rd-amigaos
+	$(INSTALL) -d $(prefix)/os-lib/sfd/3rd-amithlon
+	$(INSTALL) -d $(prefix)/os-lib/sfd/3rd-morphos
+	$(INSTALL) -d $(prefix)/os-lib/sfd/amigaos
+	$(INSTALL) -d $(prefix)/os-lib/sfd/morphos
+	$(INSTALL_DATA) $(srcdir)/README.os-lib.sfd $(prefix)/os-lib/sfd/README
+
+	# Install example file structure for includes
+	$(INSTALL) -d $(prefix)/os-include/3rd
+	$(INSTALL) -d $(prefix)/os-include/3rd-amigaos
+	$(INSTALL) -d $(prefix)/os-include/3rd-amithlon
+	$(INSTALL) -d $(prefix)/os-include/3rd-morphos
+	for dir in classes clib datatypes devices diskfont dos exec \
+		   gadgets graphics hardware images intuition libraries \
+		   prefs reaction resources rexx \
+		   utility workbench; do \
+	  $(INSTALL) -d $(prefix)/os-include/amigaos/$${dir}; \
+	done
+
+	for dir in classes clib cybergraphx datatypes devices diskfont dos \
+		   emul exec gadgets graphics guigfx hardware images \
+		   intuition libraries mui net ppcdisslib ppclib \
+		   prefs reaction render resources rexx \
+		   utility workbench; do \
+	  $(INSTALL) -d $(prefix)/os-include/morphos/$${dir}; \
+	done
+	$(INSTALL_DATA) $(srcdir)/README.os-include $(prefix)/os-include/README
+
+tgz:		all gg-fd2sfd.spec
+	cd $(srcdir) && cvs diff >/dev/null || (echo "Not checked in!"; exit 10)
+	mkdir $(EXECUTABLE)-$(VERSION)
+	cd $(EXECUTABLE)-$(VERSION) && cvs export -Dtoday -r FD2SFD fd2inline
+	mv $(EXECUTABLE)-$(VERSION)/fd2inline $(EXECUTABLE)-$(VERSION)/fd2sfd
+	mv $(EXECUTABLE)-$(VERSION)/fd2sfd/* $(EXECUTABLE)-$(VERSION)
+	cp gg-fd2sfd.spec $(EXECUTABLE)-$(VERSION)
+	rmdir $(EXECUTABLE)-$(VERSION)/fd2sfd
+	tar cfvz $(EXECUTABLE)-$(VERSION).tar.gz $(EXECUTABLE)-$(VERSION)
+	$(RM) -r $(EXECUTABLE)-$(VERSION)
+
+lha:		all tgz
+	$(RM) $(EXECUTABLE).lha
+	lha -ao5 $(EXECUTABLE).lha $(EXECUTABLE) $(EXECUTABLE).readme \
+		 $(EXECUTABLE)-$(VERSION).tar.gz
+
+
+$(EXECUTABLE):	fd2inline.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $^ $(OUTPUT_OPTION)
+
+#
+# Auto-remake autoconf stuff
+########################################
+
+${srcdir}/configure: configure.in
+	cd ${srcdir} && autoconf
+
+# autoheader might not change config.h.in, so touch a stamp file.
+${srcdir}/config.h.in: stamp-h.in
+${srcdir}/stamp-h.in: configure.in
+	cd ${srcdir} && autoheader
+	echo timestamp > ${srcdir}/stamp-h.in
+
+config.h: stamp-h
+stamp-h: config.h.in config.status
+	./config.status
+
+Makefile fd2sfd.readme gg-fd2sfd.spec: Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./config.status --recheck
+
+

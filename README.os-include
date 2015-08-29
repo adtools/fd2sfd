@@ -1,0 +1,34 @@
+Place your include files here.
+
+
+* The official AmigaOS includes goes into the "amigaos" directory.
+
+* The official MorphOS includes goes into the "morphos" directory.
+
+* You can add your own includes in the "3rd" directory.
+
+* 3rd party includes that should only be available for the AmigaOS
+compiler goes into 3rd-amigaos.
+
+* 3rd party includes that should only be available for the Amithlon
+compiler goes into 3rd-amithlon.
+
+* 3rd party includes that should only be available for the MorphOS
+compiler goes into 3rd-morphos.
+
+
+The directories are processed differenly depending on the target.
+
+
+* For the AmigaOS compiler, the amigaos, amigaos-3rd and 3rd
+directories are processed.
+
+* For the Amithlon compiler, the amigaos, amithlon-3rd and 3rd
+directories are processed.
+
+* For the MorphOS compiler, the amigaos, morphos, morphos-3rd and 3rd
+directories are processed.
+
+
+Don't forget to add the SFD files in ".../os-lib/sfd/XXX" and
+additional FD files in ".../os-lib/fd/XXX" as well.

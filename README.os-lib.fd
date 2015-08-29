@@ -1,0 +1,5 @@
+Place your FD files here.
+
+The FD files are only used if no appropriate SFD files are found. If
+so, gg-fix-includes can generate an SFD file using the FD files in
+this directory.

@@ -1,0 +1,13 @@
+Short:   Convert FD files to SFD files
+Author:  Martin Blom et al.
+Version: @VERSION@
+Type:    dev/misc
+
+fd2sfd is a parser that converts FD files and clib files to SFD files.
+FD and clib files contain information about functions in shared
+libraries.  fd2sfd reads these two files and merges the information
+contained therein, producing an output file suitable for futher
+processing using 'sfd' or 'sfdc'.
+
+fd2sfd is based on fd2inline 1.38 by Wolfgang Baron, Rainer F. Trunz,
+Kamil Iskra, Ralph Schmidt, Emmanuel Lesueur and Martin Blom.

@@ -1,0 +1,309 @@
+#!/bin/sh
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+datadir=@datadir@
+fd2sfddir=${datadir}/fd2sfd
+FD2SFD=${bindir}/fd2sfd
+SFDC=${bindir}/sfdc
+SPLITASM="awk -f ${fd2sfddir}/splitasm.awk"
+
+SEDPRAGMA='s/\([ \t]*\)#\([ \t]*\)\(include[ \t].*\)/\1#\2pragma pack()\
+\1#\2\3\
+\1#\2pragma pack(2)/'
+
+function fixinclude()
+{
+    (echo "#pragma pack(2)";
+    cat $@;
+     echo "#pragma pack()" ) | sed "$SEDPRAGMA"
+}
+
+ERROR="\e[31m"
+INFO="\e[32m"
+NORMAL="\e[0m"
+
+if [ $# -eq 1 ]; then
+  case "$1" in
+    --check-sfd)
+      CHECK=yes
+      ;;
+
+    --include)
+      INCLUDE=yes
+      ;;
+
+    --lib)
+      LIB=yes
+      ;;
+
+    --sfd)
+      SFD=yes
+      ;;
+  esac
+fi
+
+if [ -z "${CHECK}${INCLUDE}${LIB}${SFD}" ]; then
+  echo "Usage: $0 [--check-sfd] [--include] [--lib] [--sfd]"
+  echo
+  echo "  Options:"
+  echo "    --check-sfd  Make sure all SFD files are correct"
+  echo "    --include    Create and patch OS include files"
+  echo "    --lib        Create linker stub libraries"
+  echo "    --sfd        Create missing SFD files from FD and CLib files"
+  exit
+fi
+
+
+# Check SFD files if asked to
+
+if [ ${CHECK} ]; then
+  for sfd_dir in ${prefix}/os-lib/sfd/*; do
+    if [ -d ${sfd_dir} ]; then
+      files=`ls ${sfd_dir}/*_*.[Ss][Ff][Dd] 2>/dev/null`;
+      if [ ! -z "${files}" ]; then 
+        ${SFDC} --quiet --mode=verify ${files} || exit 10
+      fi
+    fi
+  done
+  exit
+fi
+
+
+# Verify that all SFD files exists, create them if instructed to do so
+
+if [ ${SFD} ]; then
+  echo -e "${INFO}Generating SFD files ...${NORMAL}"
+fi
+  
+if [ ! -d ${prefix}/os-lib/sfd/ ]; then
+  mkdir ${prefix}/os-lib/sfd/ || exit 10
+fi
+
+for fd_dir in ${prefix}/os-lib/fd/*; do
+  package=`echo "${fd_dir}" | sed -e "s,.*/,,"`
+
+  if [ -d ${fd_dir} ]; then
+    if [ ! -d ${prefix}/os-lib/sfd/${package} ]; then
+      mkdir ${prefix}/os-lib/sfd/${package} || exit 10
+    fi
+  
+    for fd in `ls ${fd_dir}/*_*.[Ff][Dd] 2>/dev/null`; do
+      base=`echo "${fd}" | sed -e "s,${fd_dir}/\(.*\)_\(.*\)\...,\1,"`
+      clib="${prefix}/os-include/${package}/clib/${base}_protos.h"
+
+      if [ ! -r ${clib} ]; then
+        if [ ${SFD} ]; then
+          echo -e "${INFO}Warning: ${clib} is missing.${NORMAL}"
+        fi
+      else
+        sfd=`echo "${fd}" | sed -e "s,${fd_dir}/\(.*\)\...,\1.sfd,"`
+        if [ ! -r ${prefix}/os-lib/sfd/${package}/${sfd} ]; then
+          if [ ${SFD} ]; then
+            echo -e -n "${NORMAL}[$sfd]${ERROR} ";
+            ${FD2SFD} ${fd} ${clib} -o \
+		${prefix}/os-lib/sfd/${package}/${sfd} 2>&1
+          else
+            echo -e "${INFO}${prefix}/os-lib/sfd/${package}/${sfd}${NORMAL}"
+            error=yes
+          fi
+        fi
+      fi
+    done
+  fi
+done
+ 
+if [ ${error} ]; then
+  echo
+  echo -e "${ERROR}The SFD files listed above are missing.${NORMAL}"
+  echo "Please install and try again, or rerun $0 using the"
+  echo "--sfd switch to generate them from the installed FD and CLIB files."
+  exit
+fi
+
+if [ ${SFD} ]; then
+  echo -e "${NORMAL}"
+  echo -e "${INFO}SFD files successfully created.${NORMAL} You may now delete"
+  echo "the FD files from ${prefix}/os-lib/fd if you want."
+  exit
+fi
+
+if [ ${LIB} ]; then
+  build_dir=`mktemp -qd /tmp/gg-fix-includes.XXXXXX`
+
+  if [ -z "${build_dir}" ]; then
+    echo "${ERROR}Unable to create temporary directory.${NORMAL}"
+    exit 10
+  fi
+fi
+
+for gcc in ${bindir}/*-*-gcc; do
+ target=`echo "${gcc}" | sed -e "s,.*/\(.*\)-gcc,\1,"`
+ 
+ if test -d ${prefix}/${target}; then
+  case "${target}" in
+   i?86be-amithlon)
+     PACKAGES=`cd ${prefix}/os-lib/sfd && echo {amigaos,3rd-amithlon,3rd}`
+     CC="${target}-gcc -Os -fomit-frame-pointer"
+     AS="${target}-as"
+     AR="${target}-ar"
+     SFDC_OS="ix86be-amithlon"
+     FIXINCLUDE="fixinclude"
+     ;;
+   m68k-amigaos)
+     PACKAGES=`cd ${prefix}/os-lib/sfd && echo {amigaos,3rd-amigaos,3rd}`
+     CC="${target}-gcc -Os -fomit-frame-pointer"
+     AS="${target}-as"
+     AR="${target}-ar"
+     SFDC_OS="${target}"
+     FIXINCLUDE="cat"
+     ;;
+   ppc-morphos)
+     PACKAGES=`cd ${prefix}/os-lib/sfd && echo {amigaos,morphos,3rd-morphos,3rd}`
+     CC="${target}-gcc -Os -fomit-frame-pointer"
+     AS="${target}-as"
+     AR="${target}-ar"
+     SFDC_OS="${target}"
+     FIXINCLUDE="fixinclude"
+     ;;
+   *)
+     SFDC_OS="X"
+     ;;
+  esac
+
+  echo -e "${ERROR}"
+  
+  if test "$SFDC_OS" == "X"; then
+    echo -e "${target}: Unsupported target."
+  else
+  
+   echo -e "${INFO}*** Target ${target}${ERROR}"
+
+   if [ ${INCLUDE} ]; then
+     rm -r ${prefix}/${target}/sys-include 2>/dev/null
+     echo "The sys-include directory is automatically generated. Do no edit!" > ${prefix}/${target}/sys-include.readme
+     mkdir ${prefix}/${target}/sys-include
+     mkdir ${prefix}/${target}/sys-include/inline
+     mkdir ${prefix}/${target}/sys-include/proto
+   fi
+
+   if [ ${LIB} ]; then
+     rm ${prefix}/${target}/lib/libamigastubs.a 2>/dev/null
+   fi;
+
+   for package in $PACKAGES; do
+     sfd_dir="${prefix}/os-lib/sfd/${package}"
+
+     if test -d ${sfd_dir}; then
+      echo -e "${INFO} *** Package ${package}${ERROR}"
+
+      if [ ${INCLUDE} ]; then     
+       echo -e "${INFO}  *** Patching and installing header files${ERROR}"
+
+       # Create directory structure
+       
+       for dir in `cd ${prefix}/os-include/${package} &&
+                   find . -type d \
+                     -and -not -ipath "./ppcinline*" \
+                     -and -not -ipath "./ppcpragma*" \
+                     -and -not -ipath "./ppcproto*" \
+                     -and -not -ipath "./inline*" \
+                     -and -not -ipath "./pragma*" \
+		     -and -not -ipath "./stormpragma*" \
+                     -and -not -ipath "./proto*"`; do
+         test -d ${prefix}/${target}/sys-include/${dir} || \
+             mkdir ${prefix}/${target}/sys-include/${dir}
+       done
+
+       # Fix and copy include files
+
+       for header in `cd ${prefix}/os-include/${package} &&
+                      find . -iname "*.h" -and -type f \
+                        -and -not -ipath "./ppcinline*" \
+                        -and -not -ipath "./ppcpragma*" \
+                        -and -not -ipath "./ppcproto*" \
+                        -and -not -ipath "./inline*" \
+                        -and -not -ipath "./pragma*" \
+                        -and -not -ipath "./stormpragma*" \
+                        -and -not -ipath "./proto*"`; do
+         echo -ne "${NORMAL}[${header}] ${ERROR}"
+         ${FIXINCLUDE} ${prefix}/os-include/${package}/${header} \
+            > ${prefix}/${target}/sys-include/${header}
+       done
+
+       echo; echo
+       echo -e "${INFO}  *** Generating inlines and proto files${ERROR}"
+
+       files=`ls ${sfd_dir}/*_*.[Ss][Ff][Dd] 2>/dev/null`;
+
+       if [ ! -z "${files}" ]; then
+         ${SFDC} --quiet --mode=macros --target=${SFDC_OS} \
+                 -o ${prefix}/${target}/sys-include/inline/%n.h \
+	         ${files} || exit 10
+
+	 ${SFDC} --quiet --mode=proto --target=${SFDC_OS} \
+                 -o ${prefix}/${target}/sys-include/proto/%n.h \
+	         ${files} || exit 10
+       fi
+       
+       cp ${fd2sfddir}/stubs.h ${fd2sfddir}/${SFDC_OS}/* \
+          ${prefix}/${target}/sys-include/inline/
+      fi
+
+      if [ ${LIB} ]; then
+        echo -e "${INFO}  *** Generating stub libraries${ERROR}"
+
+        # Note that we cannot compile the stubs until inlines and prototypes
+        # has been generated!
+
+        files=`ls ${sfd_dir}/*_*.[Ss][Ff][Dd] 2>/dev/null`;
+
+        if [ ! -z "${files}" ]; then
+	  ${SFDC} --quiet --mode=stubs --target=${SFDC_OS} \
+                  -o ${build_dir}/-stubs-%n.c \
+	          ${files} || exit 10
+
+	  for source in `ls ${build_dir}/-stubs-*.c`; do
+	    base=`echo "${source}" | sed -e "s,${build_dir}/-stubs-\(.*\)\.c,\1,"`
+
+	    echo -ne "${NORMAL}[${base}] ${ERROR}"
+	    
+	    ${CC} -S ${source} -o ${build_dir}/-stubs-${base}.s && \
+		${SPLITASM} -v dest=${build_dir} ${build_dir}/-stubs-${base}.s
+
+	    rm ${build_dir}/-stubs-${base}.c
+	    rm ${build_dir}/-stubs-${base}.s 2>/dev/null
+          done
+	fi
+      fi
+
+      echo; echo
+     fi
+   done
+
+   if [ ${LIB} ]; then
+     echo -e "${INFO} *** Assembling files${ERROR}"
+ 
+     for stub in `ls ${build_dir}/*.s`; do
+       base=`basename ${stub} .s`
+       ${AS} $stub -o ${build_dir}/${base}.o
+       rm $stub
+       echo -ne "${NORMAL}[${base}] ${ERROR}"
+     done
+
+     echo; echo
+
+     # This line can get pretty long, so we get rid of the path at least ...
+     ( cd ${build_dir} && ${AR} -rs ${prefix}/${target}/lib/libamigastubs.a *.o; \
+       rm *.o )
+   fi
+  fi
+ fi
+done
+
+if [ ${LIB} ]; then
+  rmdir ${build_dir}
+fi
+
+echo -e "${INFO}Done!${NORMAL}"
