@@ -16,7 +16,7 @@ CPPFLAGS	= @CPPFLAGS@ -DVERSION=\"$(VERSION)\" -DDATE=\"$(DATE)\" \
 LDFLAGS		= @LDFLAGS@ -s
 
 INSTALL		= @INSTALL@
-INSTALL_PROGRAM	= @INSTALL_PROGRAM@ -s
+INSTALL_PROGRAM	= @INSTALL_PROGRAM@
 INSTALL_SCRIPT	= @INSTALL_SCRIPT@
 INSTALL_DATA	= @INSTALL_DATA@
 
@@ -40,7 +40,7 @@ install:	all
 	$(INSTALL) -d $(bindir) $(fd2sfddir)
 
 	# Install tools
-	$(INSTALL_PROGRAM) $(EXECUTABLE) $(bindir)
+	$(INSTALL_PROGRAM) -s $(EXECUTABLE) $(bindir)
 	$(INSTALL_SCRIPT) cross/bin/gg-fix-includes $(bindir)
 	for f in `cd $(srcdir)/cross/share/ && find * -type f`; do \
 	  $(INSTALL_DATA) -D $(srcdir)/cross/share/$${f} $(fd2sfddir)/$${f}; \
