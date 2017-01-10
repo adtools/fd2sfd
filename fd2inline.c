@@ -326,7 +326,7 @@ SkipWSAndComments( const char* ptr )
  * It is assumed offsets are always negative.
  ******************************************************************************/
 
-#define fF_BUFSIZE 1024
+#define fF_BUFSIZE 8192
 
 /* all you need to know about an fdFile you parse */
 
