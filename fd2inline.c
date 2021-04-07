@@ -199,7 +199,7 @@ RegStr(regs reg)
 }
 
 
-static INLINE 
+static INLINE
 
 /******************************************************************************
  *    StrNRBrk
@@ -264,7 +264,7 @@ MatchGlob( char* glob, char* str )
 	  return 0;
 	}
 	break;
-	
+
       case '*':
 	if( *glob == 0 )
 	{
@@ -302,7 +302,7 @@ SkipWSAndComments( const char* ptr )
    {
       while (*ptr && (*ptr==' ' || *ptr=='\t'))
 	 ptr++;
-      if (ptr[0] == '/' && ptr[1] == '*' ) 
+      if (ptr[0] == '/' && ptr[1] == '*' )
       {
 	 ptr+=2;
 	 while (ptr[0] && ! (ptr[-2] == '*' && ptr[-1] == '/') )
@@ -1178,8 +1178,8 @@ fD_parsefd(fdDef* obj, char** comment_ptr, fdFile* infile)
 
       if (!NewString(&buf, infile->line))
       {
-	 fprintf(stderr, "No mem for line %lu\n", infile->lineno);
-	 fF_SetError(infile, real_error);
+         fprintf(stderr, "No mem for line %lu\n", infile->lineno);
+         fF_SetError(infile, real_error);
       }
       bpoint=buf; /* so -Wall keeps quiet */
 
@@ -1187,197 +1187,195 @@ fD_parsefd(fdDef* obj, char** comment_ptr, fdFile* infile)
 
       while (parsing!=ready && fF_GetError(infile)==false)
       {
-	 switch (parsing)
-	 {
-	    case name:
-	       switch (buf[0])
-	       {
-		  case '#':
-		     if (strncmp("##base", buf, 6)==0)
-		     {
-			bnext=buf+6;
-			while (*bnext==' ' || *bnext=='\t' || *bnext=='_')
-			   bnext++;
-			strcpy(BaseName, bnext);
-			BaseName[strlen(BaseName)-1]='\0';
-		     }
-		     else
-			if (strncmp("##bias", buf, 6)==0)
-			{
-			   if (!sscanf(buf+6, "%ld", &infile->offset))
-			   {
-			      fprintf(stderr, "Illegal ##bias in line %lu: %s\n",
-				 infile->lineno, infile->line);
-			      fF_SetError(infile, real_error);
-			      break; /* avoid nodef */
-			   }
-			   else
-			   {
-			      if (fF_GetOffset(infile)>0)
-				 fF_SetOffset(infile, -fF_GetOffset(infile));
-			      DBP(fprintf(stderr, "set offset to %ld\n",
-				 fF_GetOffset(infile)));
-			   }
-			}
-			else
-			{
-			   if (strncmp("##private", buf, 9)==0)
-			      fF_SetFlags(infile, fF_GetFlags(infile) |
-				 FD_PRIVATE);
-			   else if (strncmp("##public", buf, 8)==0)
-			      fF_SetFlags(infile, fF_GetFlags(infile) &
-				 ~FD_PRIVATE);
-			}
-		     /* try again somewhere else */
-		     fF_SetError(infile, nodef);
-			break;
+         switch (parsing)
+         {
+         case name:
+            switch (buf[0])
+            {
+            case '#':
+               if (strncmp("##base", buf, 6)==0)
+               {
+                  bnext=buf+6;
+                  while (*bnext==' ' || *bnext=='\t' || *bnext=='_')
+	         		   bnext++;
+			         strcpy(BaseName, bnext);
+			         BaseName[strlen(BaseName)-1]='\0';
+               }
+               else
+               if (strncmp("##bias", buf, 6)==0)
+               {
+                  if (!sscanf(buf+6, "%ld", &infile->offset))
+                  {
+                     fprintf(stderr, "Illegal ##bias in line %lu: %s\n",
+                  infile->lineno, infile->line);
+                     fF_SetError(infile, real_error);
+                     break; /* avoid nodef */
+                  }
+                  else
+                  {
+                     if (fF_GetOffset(infile)>0)
+                  fF_SetOffset(infile, -fF_GetOffset(infile));
+                     DBP(fprintf(stderr, "set offset to %ld\n",
+                  fF_GetOffset(infile)));
+                  }
+               }
+               else
+               {
+                  if (strncmp("##private", buf, 9)==0)
+                     fF_SetFlags(infile, fF_GetFlags(infile) |
+                  FD_PRIVATE);
+                  else if (strncmp("##public", buf, 8)==0)
+                     fF_SetFlags(infile, fF_GetFlags(infile) &
+                  ~FD_PRIVATE);
+               }
+               /* try again somewhere else */
+               fF_SetError(infile, nodef);
+            break;
 
-		  case '*':
-		  {
-		    size_t olen = *comment_ptr ? strlen(*comment_ptr) : 0;
-		    size_t clen = strlen(buf) + 1 + olen;
-		    
-		    *comment_ptr = realloc(*comment_ptr, clen);
+            case '*':
+            {
+               size_t olen = *comment_ptr ? strlen(*comment_ptr) : 0;
+               size_t clen = strlen(buf) + 1 + olen;
 
-		    if (olen ==0) {
-		      **comment_ptr = 0;
-		    }
+               *comment_ptr = realloc(*comment_ptr, clen);
 
-		    strcat(*comment_ptr, buf);
-		    DBP(fprintf(stderr, "Comments: %s", *comment_ptr));
+               if (olen ==0) {
+                  **comment_ptr = 0;
+               }
 
-		    /* try again somewhere else */
-		     fF_SetError(infile, nodef);
-			break;
-		  }
+               strcat(*comment_ptr, buf);
+               DBP(fprintf(stderr, "Comments: %s", *comment_ptr));
 
-		  default:
-		     /* assume a regular line here */
-		     fD_SetPrivate( obj,
-				    (fF_GetFlags(infile) & FD_PRIVATE) != 0);
-		     parsing=name; /* switch (parsing) */
-		     for (index=0; buf[index] && buf[index]!='('; index++);
+               /* try again somewhere else */
+               fF_SetError(infile, nodef);
+            }
+            break;
 
-		     if (!buf[index])
-		     {
-			/* oops, no fd ? */
-			fprintf(stderr, "Not an fd, line %lu: %s\n",
-			   infile->lineno, buf /* infile->line */);
-			fF_SetError(infile, nodef);
-		     } /* maybe next time */
-		     else
-		     {
-			buf[index]=0;
+            default:
+               /* assume a regular line here */
+               fD_SetPrivate( obj,
+                  (fF_GetFlags(infile) & FD_PRIVATE) != 0);
+               parsing=name; /* switch (parsing) */
+               for (index=0; buf[index] && buf[index]!='('; index++);
 
-			fD_NewName(obj, buf);
-			fD_SetOffset(obj, fF_GetOffset(infile));
+               if (!buf[index])
+               {
+                  /* oops, no fd ? */
+                  fprintf(stderr, "Not an fd, line %lu: %s\n",
+                     infile->lineno, buf /* infile->line */);
+                  fF_SetError(infile, nodef);
+               } /* maybe next time */
+               else
+               {
+                  buf[index]=0;
 
-			bpoint=buf+index+1;
-			parsing=params; /* continue the loop */
-		     }
-	       }
-	       break;
+                  fD_NewName(obj, buf);
+                  fD_SetOffset(obj, fF_GetOffset(infile));
 
-	    case params:
-	    {
-	       char *bptmp; /* needed for fD_NewParam */
+                  bpoint=buf+index+1;
+                  parsing=params; /* continue the loop */
+               }
+            }
+            break;
 
-	       /* look for parameters now */
+         case params:
+         {
+            char *bptmp; /* needed for fD_NewParam */
 
-	       for (bnext = bpoint; *bnext && *bnext!=',' && *bnext!=')';
-	       bnext++);
+            /* look for parameters now */
+            for (bnext = bpoint; *bnext && *bnext!=',' && *bnext!=')';
+            bnext++);
 
-	       if (*bnext)
-	       {
-		  bptmp=bpoint;
+            if (*bnext)
+            {
+               bptmp=bpoint;
 
-		  if (*bnext == ')')
-		  {
-		     if (bnext[1] != '(')
-		     {
-			fprintf(stderr, "Registers expected in line %lu: %s\n",
-			   infile->lineno, infile->line);
-			fF_SetError(infile, nodef);
-		     }
-		     else
-		     {
-			parsing=regs;
-			bpoint=bnext+2;
-		     }
-		  }
-		  else
-		     bpoint = bnext+1;
+               if (*bnext == ')')
+               {
+                  if (bnext[1] != '(')
+                  {
+                     fprintf(stderr, "Registers expected in line %lu: %s\n",
+                        infile->lineno, infile->line);
+                     fF_SetError(infile, nodef);
+                  }
+                  else
+                  {
+                     parsing=regs;
+                     bpoint=bnext+2;
+                  }
+               }
+               else
+                  bpoint = bnext+1;
 
-		  /* terminate string and advance to next item */
+               /* terminate string and advance to next item */
 
-		  *bnext='\0';
-		  if (*bptmp)
-		     fD_NewParam(obj, fD_ParamNum(obj), bptmp);
-	       }
-	       else
-	       {
-		  fF_SetError(infile, nodef);
-		  fprintf(stderr, "Param expected in line %lu: %s\n",
-		     infile->lineno, infile->line);
-	       }
-	       break;  /* switch parsing */
-	    }
+               *bnext='\0';
+               if (*bptmp)
+                  fD_NewParam(obj, fD_ParamNum(obj), bptmp);
+            }
+            else
+            {
+               fF_SetError(infile, nodef);
+               fprintf(stderr, "Param expected in line %lu: %s\n",
+                  infile->lineno, infile->line);
+            }
+         }
+         break;  /* switch parsing */
 
-	    case regs:
-	       /* look for parameters now */
+	      case regs:
+	         /* look for parameters now */
+            for (bnext=bpoint; *bnext && *bnext!='/' && *bnext!=',' &&
+               *bnext!=')'; bnext++);
 
-	       for (bnext=bpoint; *bnext && *bnext!='/' && *bnext!=',' &&
-	       *bnext!=')'; bnext++);
+            if (*bnext)
+            {
+               if (')'==*bnext)
+               {
+                  /* wow, we've finished */
+                  fF_SetOffset(infile, fF_GetOffset(infile)-FUNCTION_GAP);
+                  parsing=ready;
+               }
+               *bnext = '\0';
 
-	       if (*bnext)
-	       {
-		  if (')'==*bnext)
-		  {
-		     /* wow, we've finished */
-		     fF_SetOffset(infile, fF_GetOffset(infile)-FUNCTION_GAP);
-		     parsing=ready;
-		  }
-		  *bnext = '\0';
+               bpoint[0]=tolower(bpoint[0]);
 
-		  bpoint[0]=tolower(bpoint[0]);
+		         if ((bpoint[0]=='d' || bpoint[0]=='a') && bpoint[1]>='0' &&
+		            bpoint[1]<='8' && bnext==bpoint+2)
+		            fD_NewReg(obj, fD_RegNum(obj),
+			            bpoint[1]-'0'+(bpoint[0]=='a'? 8 : 0));
+		         else
+		         if (bnext!=bpoint)
+               {
+                  if (!strcasecmp(bpoint, "base"))
+                  {
+                     fD_SetBase(obj,1);
+                  }
+                  else if (!strcasecmp(bpoint, "sysv"))
+                  {
+                     fD_SetCFunction(obj,1);
+                  }
+                  else
+                  {
+                     /* it is when our function is void */
+                     fprintf(stderr, "Illegal register %s in line %ld\n",
+                        bpoint, infile->lineno);
+                     fF_SetError(infile, nodef);
+                  }
+               }
+            bpoint = bnext+1;
+            }
+            else
+	         {
+               fF_SetError(infile, nodef);
+               fprintf(stderr, "Reg expected in line %lu\n",
+                  infile->lineno);
+	         }
+         break; /* switch parsing */
 
-		  if ((bpoint[0]=='d' || bpoint[0]=='a') && bpoint[1]>='0' &&
-		  bpoint[1]<='8' && bnext==bpoint+2)
-		     fD_NewReg(obj, fD_RegNum(obj),
-			bpoint[1]-'0'+(bpoint[0]=='a'? 8 : 0));
-		  else
-		     if (bnext!=bpoint)
-		     {
-		        if (!strcasecmp(bpoint, "base"))
-			{
-			   fD_SetBase(obj,1);
-			}
-			else if (!strcasecmp(bpoint, "sysv"))
-			{
-			   fD_SetCFunction(obj,1);
-			}
-		        else
-			{
-			   /* it is when our function is void */
-			   fprintf(stderr, "Illegal register %s in line %ld\n",
-				   bpoint, infile->lineno);
-			   fF_SetError(infile, nodef);
-			}
-		     }
-		  bpoint = bnext+1;
-	       }
-	       else
-	       {
-		  fF_SetError(infile, nodef);
-		  fprintf(stderr, "Reg expected in line %lu\n",
-		     infile->lineno);
-	       }
-	       break; /* switch parsing */
-
-	    case ready:
-	       fprintf(stderr, "Internal error, use another compiler.\n");
-	       break;
-	 }
+         case ready:
+            fprintf(stderr, "Internal error, use another compiler.\n");
+         break;
+	      }
       }
 
       free(buf);
@@ -1543,7 +1541,7 @@ getvarargsfunction(const fdDef * obj)
 {
    unsigned int count;
    const char *name = fD_GetName(obj);
-    
+
    for (count=0; count<sizeof TagExcTable/sizeof TagExcTable[0]; count+=2)
    {
       if (strcmp(name, TagExcTable[count])==0)
@@ -1676,7 +1674,7 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
    else if (fD_ParamNum(obj) != numargs && !Quiet)
      fprintf(stderr, "Warning: %s gets %d params and %d regs!\n",
 	     fD_GetName(obj), fD_ParamNum(obj), numargs);
-     
+
 
    if ((rettype=fD_GetType(obj))==fD_nostring)
    {
@@ -1701,7 +1699,7 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
       if (strcmp(reg, "d7")==0) /* Used only when a45!=0 */
 	 d7=1;
    }
-   
+
    if (a45 && d7) /* Security check */
       if (!Quiet)
 	 fprintf(stderr, "Warning: d7 and a4 or a5 are used. This is not "
@@ -1737,9 +1735,9 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
       priv = fD_GetPrivate(obj);
       fprintf(outfile, "==%s\n", priv ? "private" : "public");
    }
-   
+
    fprintf(outfile, "%s %s(", rettype, name);
-   
+
    if (numargs>0)
    {
       for (count=d0; count<numargs; count++)
@@ -1753,7 +1751,7 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
 	 // Workaround varargs in FD file (sysv)
 	 if (strcmp(fD_GetParam(obj, count), "...")==0)
 	   sprintf(Buffer, "...");
-	 
+
 	 if (count<numargs-1)
 	    fprintf(outfile, "%s, ", Buffer);
 	 else
@@ -1771,7 +1769,7 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
    {
       return;
    }
-   
+
    if ((tagname=aliasfunction(fD_GetName(obj)))!=0)
    {
       fdDef *objnc=(fdDef*)obj;
@@ -1788,7 +1786,7 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
       fprintf(outfile, "==varargs\n");
 
       fprintf(outfile, "%s %s(", rettype, tagname);
-   
+
       if (numargs>0)
       {
 	 for (count=d0; count<numargs; count++)
@@ -1818,7 +1816,7 @@ fD_write(FILE* outfile, const fdDef* obj,int alias)
       fprintf(outfile, "==varargs\n");
 
       fprintf(outfile, "%s %s(", rettype, varname);
-   
+
       if (numargs>0)
       {
 	 for (count=d0; count<numargs; count++)
@@ -2134,7 +2132,7 @@ main(int argc, char** argv)
    }
 
    bcopy(arrdefs,defs,fds*sizeof(fdDef*));
-   
+
    qsort(arrdefs, count, sizeof arrdefs[0], fD_cmpName);
 
    if (BaseName[0])
@@ -2267,7 +2265,7 @@ main(int argc, char** argv)
    fprintf(outfile, "* This SFD file was automatically generated by fd2sfd from\n");
    fprintf(outfile, "* %s and\n", fdfilename);
    fprintf(outfile, "* %s.\n", clibfilename);
-	   
+
    if (BaseName[0])
    {
       fprintf(outfile, "==base _%s\n", BaseName);
@@ -2298,14 +2296,14 @@ main(int argc, char** argv)
       {
 	 int got_exec_types = 0;
 	 int got_utility_tagitem = 0;
-	 
+
 	 while (fgets(buffer, 1023, clib) != NULL)
 	 {
 	    int i = 0;
 
 	    while (buffer[i] == ' ' || buffer[i] == '\t') ++i;
 
-	    if( buffer[ i ] == '#') /* Pre-processor instruction */ 
+	    if( buffer[ i ] == '#') /* Pre-processor instruction */
 	    {
 	       ++i;
 
@@ -2322,7 +2320,7 @@ main(int argc, char** argv)
  		  while (buffer[i] == ' ' || buffer[i] == '\t') ++i;
 
 		  start = buffer[i];
-		  
+
 		  if (start== '"' )
 		     end = '"';
 		  else if (start == '<')
@@ -2361,11 +2359,11 @@ main(int argc, char** argv)
 	       char* td;
 
 	       i += 7;
-		 
+
 	       while (buffer[i] == ' ' || buffer[i] == '\t') ++i;
 
 	       td = buffer+i;
-	       
+
 	       while (buffer[i] != ';' && buffer[i] != 0) ++i;
 	       buffer[i] = 0;
 
@@ -2380,10 +2378,10 @@ main(int argc, char** argv)
 
 	 if (!got_utility_tagitem)
 	   fprintf(outfile, "==include <utility/tagitem.h>\n");
-	 
+
 	 free(buffer);
       }
-      
+
       fclose(clib);
    }
 
