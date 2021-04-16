@@ -57,7 +57,10 @@ typedef enum { false, nodef, real_error } Error;
 
 static int Quiet = 0;
 
-static char BaseName[64], BaseNamU[64], BaseNamL[64], BaseNamC[64];
+static char BaseName[64];
+static char BaseNamU[64]; // library base name, all chars are uppercase
+static char BaseNamL[64]; // library base name as read from .fd
+static char BaseNamC[64]; // library base name, first char is uppercase
 static char Buffer[512];
 
 static const char *LibExcTable[]=
@@ -1193,9 +1196,9 @@ fD_parsefd(fdDef* obj, char** comment_ptr, fdFile* infile)
             switch (buf[0])
             {
             case '#':
-               if (strncmp("##base", buf, 6)==0)
+               if (strncmp("##base", buf, strlen("##base"))==0)
                {
-                  bnext=buf+6;
+                  bnext=buf + strlen("##base");
                   while (*bnext==' ' || *bnext=='\t' || *bnext=='_')
 	         		   bnext++;
 			         strcpy(BaseName, bnext);
@@ -2198,24 +2201,37 @@ main(int argc, char** argv)
    fF_dtor(myfile);
 
    if (strlen(fdfilename)>7 &&
-   !strcmp(fdfilename+strlen(fdfilename)-7, "_lib.fd"))
+      !strcmp(fdfilename+strlen(fdfilename)-7, "_lib.fd"))
    {
-      char *str=fdfilename+strlen(fdfilename)-8;
+      // Extract .library name directly from .fd file name
+      // e.g. muimaster_lib.fd -> extracts "muimaster"
+      char *str=fdfilename+strlen(fdfilename) - strlen("_lib.fd");
       while (str!=fdfilename && str[-1]!='/' && str[-1]!=':')
-	 str--;
-//lcs      strncpy(BaseNamL, str, strlen(str)-7);
-      strncpy(BaseNamU, str, strlen(str)-7);
+         str--;
+      strncpy(BaseNamU, str, strlen(str) - strlen("_lib.fd"));
       BaseNamU[strlen(str)-7]='\0';
       strcpy(BaseNamL, BaseNamU);
       strcpy(BaseNamC, BaseNamU);
    }
    else
    {
-      strcpy(BaseNamU, BaseName);
-      if (strlen(BaseNamU)>4 && strcmp(BaseNamU+strlen(BaseNamU)-4, "Base")==0)
-	 BaseNamU[strlen(BaseNamU)-4]='\0';
+      // Extract .library name directly from .fd file name
+      // e.g. identify.fd -> extracts "identify"
+      char *str = fdfilename + strlen(fdfilename) - strlen(".fd");
+      while (str!=fdfilename && str[-1]!='/' && str[-1]!=':')
+         str--;
+      strncpy(BaseNamU, str, strlen(str) - strlen(".fd"));
+      BaseNamU[strlen(str) - strlen(".fd")]='\0';
       strcpy(BaseNamL, BaseNamU);
       strcpy(BaseNamC, BaseNamU);
+
+      // Use library name from from inside .fd (line "==base")
+      // e.g. "##base _CyberGfxBase" -> uses "CyberGfx" - this is wrong
+      // strcpy(BaseNamU, BaseName);
+      // if (strlen(BaseNamU)>4 && strcmp(BaseNamU+strlen(BaseNamU)-4, "Base")==0)
+      //    BaseNamU[strlen(BaseNamU)-4]='\0';
+      // strcpy(BaseNamL, BaseNamU);
+      // strcpy(BaseNamC, BaseNamU);
    }
    StrUpr(BaseNamU);
    BaseNamC[0]=toupper(BaseNamC[0]);
